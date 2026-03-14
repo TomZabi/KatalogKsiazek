@@ -1,0 +1,75 @@
+﻿<!-- MainWindow.xaml -->    
+    <Window x:Class="KatalogKsiazek.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Katalog książek" Height="550" Width="1200" FontSize="14">
+
+    <Grid Margin="20"> 
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- LISTA KSIĄŻEK -->
+        <GroupBox Header="Lista książek" Grid.Column="0" Margin="5">
+            <ListView Name="ListaKsiazek"
+                      SelectionChanged="ListaKsiazek_SelectionChanged">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="ID" DisplayMemberBinding="{Binding Id}" Width="40"/>
+                        <GridViewColumn Header="Tytuł" DisplayMemberBinding="{Binding Tytul}" Width="150"/>
+                        <GridViewColumn Header="Autor" DisplayMemberBinding="{Binding Autor}" Width="120"/>
+                        <GridViewColumn Header="Rok" DisplayMemberBinding="{Binding Rok}" Width="60"/>
+                        <GridViewColumn Header="Gatunek" DisplayMemberBinding="{Binding Gatunek}" Width="100"/>
+
+                        <GridViewColumn Header="Przeczytana" Width="90">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding Przeczytana, Mode=TwoWay}" HorizontalAlignment="Center"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+
+                        <GridViewColumn Header="Uwagi" DisplayMemberBinding="{Binding Uwagi}" Width="150"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </GroupBox>
+
+        <!-- FORMULARZ -->
+        <GroupBox Header="Dodaj książkę" Grid.Column="1" Margin="5">
+            <StackPanel Margin="10">
+
+                <TextBlock Text="Tytuł"/>
+                <TextBox Name="TytulBox"/>
+
+                <TextBlock Text="Autor" Margin="0,10,0,0"/>
+                <TextBox Name="AutorBox"/>
+
+                <TextBlock Text="Rok" Margin="0,10,0,0"/>
+                <TextBox Name="RokBox"/>
+
+                <TextBlock Text="Gatunek" Margin="0,10,0,0"/>
+                <TextBox Name="GatunekBox"/>
+                <CheckBox Name="PrzeczytanaCheck" Content="Przeczytana" Margin="0,10,0,0"/>
+
+                <TextBlock Text="Uwagi" Margin=" 0,10,0,0"/>
+                <TextBox Name="UwagiBox"/>
+
+                <Button Content="Dodaj książkę"
+                        Margin="0,20,0,0"
+                        Click="DodajKsiazke_Click"/>
+
+                <Button Content="Edytuj książkę"
+                        Margin="0,10,0,0"
+                        Click="EdytujKsiazke_Click"/>
+
+                <Button Content="Usuń książkę"
+                        Margin="0,10,0,0"
+                        Click="UsunKsiazke_Click"/>
+
+            </StackPanel>
+        </GroupBox>
+
+    </Grid>
+</Window>
