@@ -1,17 +1,25 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using KatalogKsiazek.Helpers;
 using KatalogKsiazek.Models;
 
 namespace KatalogKsiazek.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged
+    public class MainViewModel : INotifyPropertyChanged, IDataErrorInfo
     {
+        private readonly ICollectionView _widokKsiazek;
+        private readonly HashSet<string> _tkniete = new();
+        private bool _resetowanieFormularza = false;
+
         public ObservableCollection<Ksiazka> Ksiazki { get; } = new();
+        public ICollectionView WidokKsiazek => _widokKsiazek;
 
         public ObservableCollection<string> Gatunki { get; } = new()
         {
@@ -38,28 +46,52 @@ namespace KatalogKsiazek.ViewModels
         public string Tytul
         {
             get => _tytul;
-            set { _tytul = value; OnPropertyChanged(); }
+            set
+            {
+                if (!_resetowanieFormularza) _tkniete.Add(nameof(Tytul));
+                _tytul = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(BladTytul));
+            }
         }
 
         private string _autor = "";
         public string Autor
         {
             get => _autor;
-            set { _autor = value; OnPropertyChanged(); }
+            set
+            {
+                if (!_resetowanieFormularza) _tkniete.Add(nameof(Autor));
+                _autor = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(BladAutor));
+            }
         }
 
         private string _rokText = "";
         public string RokText
         {
             get => _rokText;
-            set { _rokText = value; OnPropertyChanged(); }
+            set
+            {
+                if (!_resetowanieFormularza) _tkniete.Add(nameof(RokText));
+                _rokText = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(BladRok));
+            }
         }
 
         private string _gatunek = "";
         public string Gatunek
         {
             get => _gatunek;
-            set { _gatunek = value; OnPropertyChanged(); }
+            set
+            {
+                if (!_resetowanieFormularza) _tkniete.Add(nameof(Gatunek));
+                _gatunek = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(BladGatunek));
+            }
         }
 
         private StanKsiazki _stan = StanKsiazki.Nowa;
@@ -107,9 +139,53 @@ namespace KatalogKsiazek.ViewModels
             set { _uwagi = value; OnPropertyChanged(); }
         }
 
-        public ICommand DodajCommand { get; }
-        public ICommand EdytujCommand { get; }
-        public ICommand UsunCommand { get; }
+        private string _filtr = "";
+        public string Filtr
+        {
+            get => _filtr;
+            set
+            {
+                _filtr = value;
+                OnPropertyChanged();
+                _widokKsiazek.Refresh();
+            }
+        }
+
+        public string Error => string.Empty;
+
+        public string this[string columnName] => columnName switch
+        {
+            nameof(Tytul)   when string.IsNullOrWhiteSpace(Tytul)   => "Tytuł jest wymagany.",
+            nameof(Autor)   when string.IsNullOrWhiteSpace(Autor)   => "Autor jest wymagany.",
+            nameof(RokText) when string.IsNullOrWhiteSpace(RokText) => "Rok jest wymagany.",
+            nameof(RokText) when !int.TryParse(RokText, out _)      => "Rok musi być liczbą całkowitą (np. 2024).",
+            nameof(RokText) when int.TryParse(RokText, out int r)
+                             && (r < 1 || r > DateTime.Now.Year + 1) => $"Rok musi być z zakresu 1–{DateTime.Now.Year + 1}.",
+            nameof(Gatunek) when string.IsNullOrWhiteSpace(Gatunek) => "Wybierz gatunek.",
+            _ => string.Empty
+        };
+
+        public string BladTytul   => _tkniete.Contains(nameof(Tytul))   ? this[nameof(Tytul)]   : string.Empty;
+        public string BladAutor   => _tkniete.Contains(nameof(Autor))   ? this[nameof(Autor)]   : string.Empty;
+        public string BladRok     => _tkniete.Contains(nameof(RokText)) ? this[nameof(RokText)] : string.Empty;
+        public string BladGatunek => _tkniete.Contains(nameof(Gatunek)) ? this[nameof(Gatunek)] : string.Empty;
+
+        private bool FormularzPoprawny
+        {
+            get
+            {
+                if (!int.TryParse(RokText, out int rok)) return false;
+                return !string.IsNullOrWhiteSpace(Tytul)
+                    && !string.IsNullOrWhiteSpace(Autor)
+                    && rok >= 1 && rok <= DateTime.Now.Year + 1
+                    && !string.IsNullOrWhiteSpace(Gatunek);
+            }
+        }
+
+        public ICommand DodajCommand             { get; }
+        public ICommand EdytujCommand            { get; }
+        public ICommand UsunCommand              { get; }
+        public ICommand CzyscWyszukiwanieCommand { get; }
 
         public MainViewModel()
         {
@@ -126,53 +202,58 @@ namespace KatalogKsiazek.ViewModels
             foreach (var k in dane)
                 Ksiazki.Add(k);
 
-            DodajCommand = new RelayCommand(_ => DodajKsiazke(), _ => MozeDodac());
-            EdytujCommand = new RelayCommand(_ => EdytujKsiazke(), _ => MozeEdytowac());
-            UsunCommand = new RelayCommand(_ => UsunKsiazke(), _ => MozeUsunac());
+            _widokKsiazek = CollectionViewSource.GetDefaultView(Ksiazki);
+            _widokKsiazek.Filter = FiltrujKsiazki;
+
+            DodajCommand             = new RelayCommand(_ => DodajKsiazke(),   _ => FormularzPoprawny);
+            EdytujCommand            = new RelayCommand(_ => EdytujKsiazke(),  _ => Wybrana != null && FormularzPoprawny);
+            UsunCommand              = new RelayCommand(_ => UsunKsiazke(),    _ => Wybrana != null);
+            CzyscWyszukiwanieCommand = new RelayCommand(_ => Filtr = "",       _ => !string.IsNullOrEmpty(Filtr));
+        }
+
+        private bool FiltrujKsiazki(object obj)
+        {
+            if (string.IsNullOrWhiteSpace(Filtr)) return true;
+            if (obj is not Ksiazka k) return false;
+
+            var f = Filtr.ToLowerInvariant();
+            return k.Tytul.ToLowerInvariant().Contains(f)
+                || k.Autor.ToLowerInvariant().Contains(f)
+                || k.Gatunek.ToLowerInvariant().Contains(f)
+                || k.StanOpis.ToLowerInvariant().Contains(f);
         }
 
         private void DodajKsiazke()
         {
-            if (!int.TryParse(RokText, out int rok))
-            {
-                MessageBox.Show("Podaj poprawny rok.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+            if (!int.TryParse(RokText, out int rok)) return;
 
             int noweId = Ksiazki.Count == 0 ? 1 : Ksiazki.Max(k => k.Id) + 1;
-
             Ksiazki.Add(new Ksiazka
             {
-                Id = noweId,
-                Tytul = Tytul,
-                Autor = Autor,
-                Rok = rok,
+                Id      = noweId,
+                Tytul   = Tytul,
+                Autor   = Autor,
+                Rok     = rok,
                 Gatunek = Gatunek,
-                Stan = Stan,
-                Ocena = Ocena,
-                Uwagi = Uwagi
+                Stan    = Stan,
+                Ocena   = Ocena,
+                Uwagi   = Uwagi
             });
-
             CzyscFormularz();
         }
 
         private void EdytujKsiazke()
         {
             if (Wybrana == null) return;
+            if (!int.TryParse(RokText, out int rok)) return;
 
-            if (!int.TryParse(RokText, out int rok))
-            {
-                MessageBox.Show("Podaj poprawny rok.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            Wybrana.Tytul = Tytul;
-            Wybrana.Autor = Autor;
-            Wybrana.Rok = rok;
+            Wybrana.Tytul   = Tytul;
+            Wybrana.Autor   = Autor;
+            Wybrana.Rok     = rok;
             Wybrana.Gatunek = Gatunek;
-            Wybrana.Stan = Stan;
-            Wybrana.Ocena = Ocena;
-            Wybrana.Uwagi = Uwagi;
+            Wybrana.Stan    = Stan;
+            Wybrana.Ocena   = Ocena;
+            Wybrana.Uwagi   = Uwagi;
 
             CzyscFormularz();
             Wybrana = null;
@@ -181,34 +262,59 @@ namespace KatalogKsiazek.ViewModels
         private void UsunKsiazke()
         {
             if (Wybrana == null) return;
+
+            var wynik = MessageBox.Show(
+                $"Czy na pewno chcesz usunąć książkę:\n\"{Wybrana.Tytul}\"?",
+                "Potwierdzenie usunięcia",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (wynik != MessageBoxResult.Yes) return;
+
             Ksiazki.Remove(Wybrana);
             CzyscFormularz();
         }
 
-        private bool MozeDodac() => !string.IsNullOrWhiteSpace(Tytul);
-        private bool MozeEdytowac() => Wybrana != null;
-        private bool MozeUsunac() => Wybrana != null;
-
         private void WczytajDoFormularza(Ksiazka k)
         {
-            Tytul = k.Tytul;
-            Autor = k.Autor;
+            _resetowanieFormularza = true;
+            _tkniete.Clear();
+
+            Tytul   = k.Tytul;
+            Autor   = k.Autor;
             RokText = k.Rok.ToString();
             Gatunek = k.Gatunek;
-            Stan = k.Stan;
-            Ocena = k.Ocena;
-            Uwagi = k.Uwagi;
+            Stan    = k.Stan;
+            Ocena   = k.Ocena;
+            Uwagi   = k.Uwagi;
+
+            NotyfikujBledy();
+            _resetowanieFormularza = false;
         }
 
         private void CzyscFormularz()
         {
-            Tytul = "";
-            Autor = "";
+            _resetowanieFormularza = true;
+            _tkniete.Clear();
+
+            Tytul   = "";
+            Autor   = "";
             RokText = "";
             Gatunek = "";
-            Stan = StanKsiazki.Nowa;
-            Ocena = 5;
-            Uwagi = "";
+            Stan    = StanKsiazki.Nowa;
+            Ocena   = 5;
+            Uwagi   = "";
+
+            NotyfikujBledy();
+            _resetowanieFormularza = false;
+        }
+
+        private void NotyfikujBledy()
+        {
+            OnPropertyChanged(nameof(BladTytul));
+            OnPropertyChanged(nameof(BladAutor));
+            OnPropertyChanged(nameof(BladRok));
+            OnPropertyChanged(nameof(BladGatunek));
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

@@ -7,6 +7,19 @@
         MinHeight="500" MinWidth="800"
         FontSize="13">
 
+    <Window.Resources>
+        <Style x:Key="BladStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="Red"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Text}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
     <Window.DataContext>
         <vm:MainViewModel />
     </Window.DataContext>
@@ -23,11 +36,30 @@
 
             <!-- LISTA KSIĄŻEK -->
             <GroupBox Header="Lista książek" Grid.Column="0">
-                <ListBox ItemsSource="{Binding Ksiazki}"
-                         SelectedItem="{Binding Wybrana, Mode=TwoWay}"
-                         HorizontalContentAlignment="Stretch"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto"
-                         BorderThickness="0">
+                <DockPanel LastChildFill="True">
+
+                    <!-- WYSZUKIWANIE -->
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0"
+                                 Text="{Binding Filtr, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,0,4,0"
+                                 ToolTip="Szukaj po tytule, autorze, gatunku lub stanie"/>
+                        <Button Grid.Column="1"
+                                Content="✕"
+                                Command="{Binding CzyscWyszukiwanieCommand}"
+                                Padding="6,2"
+                                ToolTip="Wyczyść wyszukiwanie"/>
+                    </Grid>
+
+                    <ListBox ItemsSource="{Binding Ksiazki}"
+                             SelectedItem="{Binding Wybrana, Mode=TwoWay}"
+                             HorizontalContentAlignment="Stretch"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             BorderThickness="0">
 
                     <ListBox.ItemTemplate>
                         <DataTemplate>
@@ -115,7 +147,8 @@
                         </Style>
                     </ListBox.ItemContainerStyle>
 
-                </ListBox>
+                    </ListBox>
+                </DockPanel>
             </GroupBox>
 
             <!-- SPLITTER -->
@@ -133,21 +166,25 @@
 
                         <TextBlock Text="Tytuł" FontWeight="SemiBold"/>
                         <TextBox Text="{Binding Tytul, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,2,0,8"/>
+                                 Margin="0,2,0,2"/>
+                        <TextBlock Text="{Binding BladTytul}" Style="{StaticResource BladStyle}"/>
 
                         <TextBlock Text="Autor" FontWeight="SemiBold"/>
                         <TextBox Text="{Binding Autor, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,2,0,8"/>
+                                 Margin="0,2,0,2"/>
+                        <TextBlock Text="{Binding BladAutor}" Style="{StaticResource BladStyle}"/>
 
                         <TextBlock Text="Rok" FontWeight="SemiBold"/>
                         <TextBox Text="{Binding RokText, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,2,0,8"/>
+                                 Margin="0,2,0,2"/>
+                        <TextBlock Text="{Binding BladRok}" Style="{StaticResource BladStyle}"/>
 
                         <TextBlock Text="Gatunek" FontWeight="SemiBold"/>
                         <ComboBox ItemsSource="{Binding Gatunki}"
                                   SelectedItem="{Binding Gatunek}"
                                   IsEditable="True"
-                                  Margin="0,2,0,8"/>
+                                  Margin="0,2,0,2"/>
+                        <TextBlock Text="{Binding BladGatunek}" Style="{StaticResource BladStyle}"/>
 
                         <TextBlock Text="Stan" FontWeight="SemiBold"/>
                         <StackPanel Margin="0,4,0,8">
