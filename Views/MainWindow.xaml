@@ -24,8 +24,7 @@
         <vm:MainViewModel />
     </Window.DataContext>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="16">
+    <Grid Margin="16">
 
             <!-- RESPONSYWNE KOLUMNY -->
             <Grid.ColumnDefinitions>
@@ -243,6 +242,5 @@
                 </ScrollViewer>
             </GroupBox>
 
-        </Grid>
-    </ScrollViewer>
+    </Grid>
 </Window>
