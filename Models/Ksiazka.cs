@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 
 namespace KatalogKsiazek.Models
 {
@@ -57,6 +58,7 @@ namespace KatalogKsiazek.Models
             set { _stan = value; OnPropertyChanged(); OnPropertyChanged(nameof(StanOpis)); }
         }
 
+        [JsonIgnore]
         public string StanOpis => Stan switch
         {
             StanKsiazki.Nowa => "📚 Nowa",
@@ -71,6 +73,7 @@ namespace KatalogKsiazek.Models
             set { _ocena = value; OnPropertyChanged(); OnPropertyChanged(nameof(OcenaOpis)); }
         }
 
+        [JsonIgnore]
         public string OcenaOpis => $"{_ocena}/10";
 
         public string Uwagi
