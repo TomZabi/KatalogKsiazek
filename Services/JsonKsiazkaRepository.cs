@@ -10,8 +10,8 @@ namespace KatalogKsiazek.Services
     public class JsonKsiazkaRepository : IKsiazkaRepository
     {
         private static readonly string _sciezka = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "KatalogKsiazek",
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            "wpf",
             "ksiazki.json");
 
         private static readonly JsonSerializerOptions _opcje = new()
