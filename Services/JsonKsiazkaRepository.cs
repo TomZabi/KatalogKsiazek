@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using KatalogKsiazek.Models;
@@ -17,6 +18,7 @@ namespace KatalogKsiazek.Services
         private static readonly JsonSerializerOptions _opcje = new()
         {
             WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
             Converters = { new JsonStringEnumConverter() }
         };
 
@@ -27,7 +29,7 @@ namespace KatalogKsiazek.Services
 
             try
             {
-                string json = File.ReadAllText(_sciezka);
+                string json = File.ReadAllText(_sciezka, System.Text.Encoding.UTF8);
                 return JsonSerializer.Deserialize<List<Ksiazka>>(json, _opcje)
                        ?? new List<Ksiazka>();
             }
@@ -44,7 +46,7 @@ namespace KatalogKsiazek.Services
                 Directory.CreateDirectory(katalog);
 
             string json = JsonSerializer.Serialize(ksiazki, _opcje);
-            File.WriteAllText(_sciezka, json);
+            File.WriteAllText(_sciezka, json, System.Text.Encoding.UTF8);
         }
     }
 }

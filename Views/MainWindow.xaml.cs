@@ -1,7 +1,9 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using KatalogKsiazek.ViewModels;
 
 namespace KatalogKsiazek.Views
 {
@@ -25,6 +27,22 @@ namespace KatalogKsiazek.Views
             }
 
             listBox.SelectedItem = null;
+        }
+
+        // Zamykanie okna z niezapisanymi zmianami
+        private void Window_Closing(object sender, CancelEventArgs e)
+        {
+            if (DataContext is MainViewModel vm && vm.FormularzZmodyfikowany)
+            {
+                var wynik = MessageBox.Show(
+                    "Masz niezapisane zmiany. Czy na pewno chcesz zamknąć aplikację?",
+                    "Niezapisane zmiany",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (wynik == MessageBoxResult.No)
+                    e.Cancel = true;
+            }
         }
     }
 }

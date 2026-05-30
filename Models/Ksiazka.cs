@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -81,6 +82,49 @@ namespace KatalogKsiazek.Models
             get => _uwagi;
             set { _uwagi = value; OnPropertyChanged(); }
         }
+
+        private DateTime _dataDodania = DateTime.Today;
+        public DateTime DataDodania
+        {
+            get => _dataDodania;
+            set { _dataDodania = value; OnPropertyChanged(); }
+        }
+
+        private DateTime? _dataPrzeczytania;
+        public DateTime? DataPrzeczytania
+        {
+            get => _dataPrzeczytania;
+            set { _dataPrzeczytania = value; OnPropertyChanged(); OnPropertyChanged(nameof(DataPrzeczytaniaOpis)); }
+        }
+
+        private string _wydawnictwo = "";
+        public string Wydawnictwo
+        {
+            get => _wydawnictwo;
+            set { _wydawnictwo = value; OnPropertyChanged(); }
+        }
+
+        private int _liczbaStron;
+        public int LiczbaStron
+        {
+            get => _liczbaStron;
+            set { _liczbaStron = value; OnPropertyChanged(); OnPropertyChanged(nameof(LiczbaStronOpis)); }
+        }
+
+        private string _isbn = "";
+        public string ISBN
+        {
+            get => _isbn;
+            set { _isbn = value; OnPropertyChanged(); }
+        }
+
+        [JsonIgnore]
+        public string LiczbaStronOpis => _liczbaStron > 0 ? $"{_liczbaStron} str." : "–";
+
+        [JsonIgnore]
+        public string DataPrzeczytaniaOpis => _dataPrzeczytania.HasValue
+            ? _dataPrzeczytania.Value.ToString("d", System.Globalization.CultureInfo.CurrentCulture)
+            : "–";
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

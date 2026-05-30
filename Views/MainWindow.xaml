@@ -5,7 +5,8 @@
         Title="Katalog książek (MVVM)"
         Height="640" Width="1100"
         MinHeight="500" MinWidth="800"
-        FontSize="13">
+        FontSize="13"
+        Closing="Window_Closing">
 
     <Window.Resources>
         <Style x:Key="BladStyle" TargetType="TextBlock">
@@ -115,67 +116,60 @@
 
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Expander Margin="0,2" HorizontalAlignment="Stretch">
-                                <Expander.Header>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock FontWeight="SemiBold" TextWrapping="Wrap" MinWidth="150">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Text" Value="{Binding Tytul}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Tytul}" Value="">
-                                                            <Setter Property="Text" Value="(Nowa...)"/>
-                                                            <Setter Property="Foreground" Value="Gray"/>
-                                                            <Setter Property="FontStyle" Value="Italic"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <TextBlock Text=" - " Foreground="Gray"/>
-                                        <TextBlock Text="{Binding Autor}" Foreground="#555" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </Expander.Header>
-                                <Border Background="#F5F5F5"
-                                        BorderBrush="#DDD"
-                                        BorderThickness="1"
-                                        CornerRadius="4"
-                                        Padding="12,8"
-                                        Margin="20,4,4,4">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Rok:"     FontWeight="SemiBold"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Rok}"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="2" Text="Gatunek:" FontWeight="SemiBold"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding Gatunek}"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Stan:"    FontWeight="SemiBold" Margin="0,6,0,0"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding StanOpis}"             Margin="0,6,0,0"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Ocena:"   FontWeight="SemiBold" Margin="0,6,0,0"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding OcenaOpis}"            Margin="0,6,0,0"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Uwagi:"   FontWeight="SemiBold" Margin="0,6,0,0"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3"
-                                                   Text="{Binding Uwagi}" TextWrapping="Wrap"
-                                                   Foreground="#444" Margin="0,6,0,0"/>
-                                    </Grid>
-                                </Border>
-                            </Expander>
+                            <StackPanel Margin="2,4">
+                                <!-- Zawsze widoczny tytuł -->
+                                <TextBlock FontWeight="SemiBold" TextWrapping="Wrap">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="{Binding Tytul}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Tytul}" Value="">
+                                                    <Setter Property="Text" Value="(Nowa...)"/>
+                                                    <Setter Property="Foreground" Value="Gray"/>
+                                                    <Setter Property="FontStyle" Value="Italic"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <!-- Szczegóły widoczne po zaznaczeniu (IsSelected trigger) -->
+                                <StackPanel Margin="0,4,0,2">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Path=IsSelected,
+                                                    RelativeSource={RelativeSource Mode=FindAncestor,
+                                                    AncestorType={x:Type ListBoxItem}}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Foreground="#444">
+                                        <Run FontWeight="SemiBold" Text="{Binding Autor, Mode=OneWay}"/>
+                                    </TextBlock>
+                                    <TextBlock Foreground="#666" Margin="0,2,0,0">
+                                        <Run Text="{Binding StanOpis, Mode=OneWay}"/>
+                                        <Run Text="  "/>
+                                        <Run Text="{Binding Gatunek, Mode=OneWay}"/>
+                                        <Run Text=" ("/>
+                                        <Run Text="{Binding Rok, Mode=OneWay}"/>
+                                        <Run Text=")"/>
+                                    </TextBlock>
+                                    <TextBlock Foreground="#888" Margin="0,1,0,0">
+                                        <Run Text="Ocena: "/>
+                                        <Run Text="{Binding OcenaOpis, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
 
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Padding" Value="4,2"/>
                         </Style>
                     </ListBox.ItemContainerStyle>
                 </ListBox>
@@ -264,7 +258,37 @@
                                  Height="60"
                                  TextWrapping="Wrap"
                                  AcceptsReturn="True"
-                                 Margin="0,2,0,16"/>
+                                 Margin="0,2,0,10"/>
+
+                        <!-- Data przeczytania – zawsze widoczna, ręczne wpisanie lub kalendarz -->
+                        <TextBlock Text="Data przeczytania" FontWeight="SemiBold"/>
+                        <DatePicker SelectedDate="{Binding DataPrzeczytaniaForm}"
+                                    IsEnabled="True"
+                                    ToolTip="Wpisz datę ręcznie (np. 2026-05-30) lub wybierz z kalendarza"
+                                    Margin="0,2,0,8"/>
+
+                        <TextBlock Text="Wydawnictwo" FontWeight="SemiBold"/>
+                        <TextBox Text="{Binding Wydawnictwo, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,2,0,8"/>
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Liczba stron" FontWeight="SemiBold"/>
+                                <TextBox Text="{Binding LiczbaStronText, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,2,0,2"/>
+                                <TextBlock Text="{Binding BladLiczbaStron}" Style="{StaticResource BladStyle}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="ISBN" FontWeight="SemiBold"/>
+                                <TextBox Text="{Binding ISBN, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="0,2,0,2"/>
+                            </StackPanel>
+                        </Grid>
 
                         <Grid Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>

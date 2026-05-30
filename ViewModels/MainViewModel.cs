@@ -91,6 +91,7 @@ namespace KatalogKsiazek.ViewModels
 
         public bool MaWybrana => _wybrana != null;
         public bool JestNowaKsiazka => _trybNowa;
+        public bool FormularzZmodyfikowany => _formularzZmodyfikowany;
 
         // ── Pola formularza ──────────────────────────────────────────────
 
@@ -104,6 +105,7 @@ namespace KatalogKsiazek.ViewModels
                 _tytul = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(BladTytul));
+                CommandManager.InvalidateRequerySuggested();
             }
         }
 
@@ -117,6 +119,7 @@ namespace KatalogKsiazek.ViewModels
                 _autor = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(BladAutor));
+                CommandManager.InvalidateRequerySuggested();
             }
         }
 
@@ -130,6 +133,7 @@ namespace KatalogKsiazek.ViewModels
                 _rokText = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(BladRok));
+                CommandManager.InvalidateRequerySuggested();
             }
         }
 
@@ -143,6 +147,7 @@ namespace KatalogKsiazek.ViewModels
                 _gatunek = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(BladGatunek));
+                CommandManager.InvalidateRequerySuggested();
             }
         }
 
@@ -157,12 +162,28 @@ namespace KatalogKsiazek.ViewModels
                 OnPropertyChanged(nameof(StanNowa));
                 OnPropertyChanged(nameof(StanWTrakcie));
                 OnPropertyChanged(nameof(StanPrzeczytana));
+                OnPropertyChanged(nameof(CzyPrzeczytana));
             }
         }
 
+        public bool CzyPrzeczytana => Stan == StanKsiazki.Przeczytana;
+
         public bool StanNowa        { get => Stan == StanKsiazki.Nowa;        set { if (value) { if (!_resetowanieFormularza) _formularzZmodyfikowany = true; Stan = StanKsiazki.Nowa; } } }
         public bool StanWTrakcie    { get => Stan == StanKsiazki.WTrakcie;    set { if (value) { if (!_resetowanieFormularza) _formularzZmodyfikowany = true; Stan = StanKsiazki.WTrakcie; } } }
-        public bool StanPrzeczytana { get => Stan == StanKsiazki.Przeczytana; set { if (value) { if (!_resetowanieFormularza) _formularzZmodyfikowany = true; Stan = StanKsiazki.Przeczytana; } } }
+        public bool StanPrzeczytana
+        {
+            get => Stan == StanKsiazki.Przeczytana;
+            set
+            {
+                if (value)
+                {
+                    if (!_resetowanieFormularza) _formularzZmodyfikowany = true;
+                    Stan = StanKsiazki.Przeczytana;
+                    if (!_resetowanieFormularza && DataPrzeczytaniaForm == null)
+                        DataPrzeczytaniaForm = DateTime.Today;
+                }
+            }
+        }
 
         private int _ocena = 5;
         public int Ocena
@@ -177,6 +198,40 @@ namespace KatalogKsiazek.ViewModels
         {
             get => _uwagi;
             set { if (!_resetowanieFormularza) _formularzZmodyfikowany = true; _uwagi = value; OnPropertyChanged(); }
+        }
+
+        private string _wydawnictwo = "";
+        public string Wydawnictwo
+        {
+            get => _wydawnictwo;
+            set { if (!_resetowanieFormularza) _formularzZmodyfikowany = true; _wydawnictwo = value; OnPropertyChanged(); }
+        }
+
+        private string _liczbaStronText = "";
+        public string LiczbaStronText
+        {
+            get => _liczbaStronText;
+            set
+            {
+                if (!_resetowanieFormularza) { _tkniete.Add(nameof(LiczbaStronText)); _formularzZmodyfikowany = true; }
+                _liczbaStronText = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(BladLiczbaStron));
+            }
+        }
+
+        private string _isbn = "";
+        public string ISBN
+        {
+            get => _isbn;
+            set { if (!_resetowanieFormularza) _formularzZmodyfikowany = true; _isbn = value; OnPropertyChanged(); }
+        }
+
+        private DateTime? _dataPrzeczytaniaForm;
+        public DateTime? DataPrzeczytaniaForm
+        {
+            get => _dataPrzeczytaniaForm;
+            set { if (!_resetowanieFormularza) _formularzZmodyfikowany = true; _dataPrzeczytaniaForm = value; OnPropertyChanged(); }
         }
 
         // ── Filtry ───────────────────────────────────────────────────────
@@ -222,23 +277,29 @@ namespace KatalogKsiazek.ViewModels
             nameof(RokText) when int.TryParse(RokText, out int r)
                              && (r < 1 || r > DateTime.Now.Year + 1) => $"Rok musi być z zakresu 1–{DateTime.Now.Year + 1}.",
             nameof(Gatunek) when string.IsNullOrWhiteSpace(Gatunek) => "Wybierz gatunek.",
+            nameof(LiczbaStronText) when !string.IsNullOrEmpty(LiczbaStronText)
+                             && (!int.TryParse(LiczbaStronText, out int ls) || ls <= 0) => "Liczba stron musi być liczbą całkowitą > 0.",
             _ => string.Empty
         };
 
-        public string BladTytul   => _tkniete.Contains(nameof(Tytul))   ? this[nameof(Tytul)]   : string.Empty;
-        public string BladAutor   => _tkniete.Contains(nameof(Autor))   ? this[nameof(Autor)]   : string.Empty;
-        public string BladRok     => _tkniete.Contains(nameof(RokText)) ? this[nameof(RokText)] : string.Empty;
-        public string BladGatunek => _tkniete.Contains(nameof(Gatunek)) ? this[nameof(Gatunek)] : string.Empty;
+        public string BladTytul       => _tkniete.Contains(nameof(Tytul))           ? this[nameof(Tytul)]           : string.Empty;
+        public string BladAutor       => _tkniete.Contains(nameof(Autor))           ? this[nameof(Autor)]           : string.Empty;
+        public string BladRok         => _tkniete.Contains(nameof(RokText))         ? this[nameof(RokText)]         : string.Empty;
+        public string BladGatunek     => _tkniete.Contains(nameof(Gatunek))         ? this[nameof(Gatunek)]         : string.Empty;
+        public string BladLiczbaStron => _tkniete.Contains(nameof(LiczbaStronText)) ? this[nameof(LiczbaStronText)] : string.Empty;
 
         private bool FormularzPoprawny
         {
             get
             {
                 if (!int.TryParse(RokText, out int rok)) return false;
+                bool liczbaStronOk = string.IsNullOrEmpty(LiczbaStronText)
+                    || (int.TryParse(LiczbaStronText, out int ls) && ls > 0);
                 return !string.IsNullOrWhiteSpace(Tytul)
                     && !string.IsNullOrWhiteSpace(Autor)
                     && rok >= 1 && rok <= DateTime.Now.Year + 1
-                    && !string.IsNullOrWhiteSpace(Gatunek);
+                    && !string.IsNullOrWhiteSpace(Gatunek)
+                    && liczbaStronOk;
             }
         }
 
@@ -361,13 +422,17 @@ namespace KatalogKsiazek.ViewModels
             // Wyczyść formularz ręcznie (omijamy setter Wybrana, by nie wywołać WczytajDoFormularza)
             _resetowanieFormularza = true;
             _tkniete.Clear();
-            Tytul   = "";
-            Autor   = "";
-            RokText = DateTime.Now.Year.ToString();
-            Gatunek = "";
-            Stan    = StanKsiazki.Nowa;
-            Ocena   = 5;
-            Uwagi   = "";
+            Tytul                = "";
+            Autor                = "";
+            RokText              = DateTime.Now.Year.ToString();
+            Gatunek              = "";
+            Stan                 = StanKsiazki.Nowa;
+            Ocena                = 5;
+            Uwagi                = "";
+            Wydawnictwo          = "";
+            LiczbaStronText      = "";
+            ISBN                 = "";
+            DataPrzeczytaniaForm = null;
             _resetowanieFormularza = false;
             NotyfikujBledy();
 
@@ -388,21 +453,17 @@ namespace KatalogKsiazek.ViewModels
             NotyfikujBledy();
             if (!FormularzPoprawny) return;
 
-            var potwierdzenie = MessageBox.Show(
-                $"Czy na pewno chcesz zapisać zmiany dla:\n\"{Tytul}\"?",
-                "Potwierdzenie zapisu",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (potwierdzenie != MessageBoxResult.Yes) return;
-
-            _wybrana.Tytul   = Tytul;
-            _wybrana.Autor   = Autor;
-            _wybrana.Rok     = rok;
-            _wybrana.Gatunek = Gatunek;
-            _wybrana.Stan    = Stan;
-            _wybrana.Ocena   = Ocena;
-            _wybrana.Uwagi   = Uwagi;
+            _wybrana.Tytul          = Tytul;
+            _wybrana.Autor          = Autor;
+            _wybrana.Rok            = rok;
+            _wybrana.Gatunek        = Gatunek;
+            _wybrana.Stan           = Stan;
+            _wybrana.Ocena          = Ocena;
+            _wybrana.Uwagi          = Uwagi;
+            _wybrana.Wydawnictwo    = Wydawnictwo;
+            _wybrana.LiczbaStron    = int.TryParse(LiczbaStronText, out int ls) ? ls : 0;
+            _wybrana.ISBN           = ISBN;
+            _wybrana.DataPrzeczytania = DataPrzeczytaniaForm;
 
             _formularzZmodyfikowany = false;
             _trybNowa = false;
@@ -480,13 +541,17 @@ namespace KatalogKsiazek.ViewModels
             _resetowanieFormularza = true;
             _tkniete.Clear();
 
-            Tytul   = k.Tytul;
-            Autor   = k.Autor;
-            RokText = k.Rok > 0 ? k.Rok.ToString() : "";
-            Gatunek = k.Gatunek;
-            Stan    = k.Stan;
-            Ocena   = k.Ocena;
-            Uwagi   = k.Uwagi;
+            Tytul                = k.Tytul;
+            Autor                = k.Autor;
+            RokText              = k.Rok > 0 ? k.Rok.ToString() : "";
+            Gatunek              = k.Gatunek;
+            Stan                 = k.Stan;
+            Ocena                = k.Ocena;
+            Uwagi                = k.Uwagi;
+            Wydawnictwo          = k.Wydawnictwo;
+            LiczbaStronText      = k.LiczbaStron > 0 ? k.LiczbaStron.ToString() : "";
+            ISBN                 = k.ISBN;
+            DataPrzeczytaniaForm = k.DataPrzeczytania;
 
             NotyfikujBledy();
             _formularzZmodyfikowany = false;
@@ -498,13 +563,17 @@ namespace KatalogKsiazek.ViewModels
             _resetowanieFormularza = true;
             _tkniete.Clear();
 
-            Tytul   = "";
-            Autor   = "";
-            RokText = "";
-            Gatunek = "";
-            Stan    = StanKsiazki.Nowa;
-            Ocena   = 5;
-            Uwagi   = "";
+            Tytul                = "";
+            Autor                = "";
+            RokText              = "";
+            Gatunek              = "";
+            Stan                 = StanKsiazki.Nowa;
+            Ocena                = 5;
+            Uwagi                = "";
+            Wydawnictwo          = "";
+            LiczbaStronText      = "";
+            ISBN                 = "";
+            DataPrzeczytaniaForm = null;
 
             NotyfikujBledy();
             _formularzZmodyfikowany = false;
@@ -517,6 +586,7 @@ namespace KatalogKsiazek.ViewModels
             OnPropertyChanged(nameof(BladAutor));
             OnPropertyChanged(nameof(BladRok));
             OnPropertyChanged(nameof(BladGatunek));
+            OnPropertyChanged(nameof(BladLiczbaStron));
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
