@@ -56,7 +56,7 @@ namespace KatalogKsiazek.Models
         public StanKsiazki Stan
         {
             get => _stan;
-            set { _stan = value; OnPropertyChanged(); OnPropertyChanged(nameof(StanOpis)); }
+            set { _stan = value; OnPropertyChanged(); OnPropertyChanged(nameof(StanOpis)); OnPropertyChanged(nameof(StanIkona)); }
         }
 
         [JsonIgnore]
@@ -65,6 +65,15 @@ namespace KatalogKsiazek.Models
             StanKsiazki.Nowa => "📚 Nowa",
             StanKsiazki.WTrakcie => "📖 W trakcie",
             StanKsiazki.Przeczytana => "✅ Przeczytana",
+            _ => ""
+        };
+
+        [JsonIgnore]
+        public string StanIkona => Stan switch
+        {
+            StanKsiazki.Nowa => "📚",
+            StanKsiazki.WTrakcie => "📖",
+            StanKsiazki.Przeczytana => "✅",
             _ => ""
         };
 
@@ -88,6 +97,13 @@ namespace KatalogKsiazek.Models
         {
             get => _dataDodania;
             set { _dataDodania = value; OnPropertyChanged(); }
+        }
+
+        private string _okladkaSciezka = "";
+        public string OkladkaSciezka
+        {
+            get => _okladkaSciezka;
+            set { _okladkaSciezka = value ?? ""; OnPropertyChanged(); }
         }
 
         private DateTime? _dataPrzeczytania;

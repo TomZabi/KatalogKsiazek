@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:KatalogKsiazek.ViewModels"
+        xmlns:h="clr-namespace:KatalogKsiazek.Helpers"
         Title="Katalog książek (MVVM)"
         Height="640" Width="1100"
         MinHeight="500" MinWidth="800"
@@ -9,6 +10,8 @@
         Closing="Window_Closing">
 
     <Window.Resources>
+        <h:StringToImageSourceConverter x:Key="OkladkaConverter"/>
+
         <Style x:Key="BladStyle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="Red"/>
             <Setter Property="FontSize" Value="11"/>
@@ -75,7 +78,6 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="70"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <ComboBox Grid.Column="0"
@@ -88,19 +90,70 @@
                               SelectedItem="{Binding FiltrStan}"
                               Margin="0,0,4,0"
                               ToolTip="Filtruj po stanie czytania"/>
-                    <TextBox Grid.Column="2"
-                             Text="{Binding FiltrRok, UpdateSourceTrigger=PropertyChanged}"
-                             Margin="0,0,4,0"
-                             ToolTip="Filtruj po roku wydania (np. 1954)"/>
-                    <Button Grid.Column="3"
+                    <Button Grid.Column="2"
                             Content="✕ Filtry"
                             Command="{Binding CzyscFiltryCommand}"
                             Padding="6,2"
                             ToolTip="Wyczyść wszystkie filtry"/>
                 </Grid>
 
+                <!-- Sortowanie -->
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Sortuj:" VerticalAlignment="Center"
+                               Margin="0,0,6,0" Foreground="Gray"/>
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding SortowanieOpcje}"
+                              SelectedItem="{Binding WybraneSortowanie}"/>
+                </Grid>
+
+                <!-- Filtr: data przeczytania -->
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Przeczytana od:"
+                               VerticalAlignment="Center" Margin="0,0,4,0" Foreground="Gray"/>
+                    <DatePicker Grid.Column="1"
+                                SelectedDate="{Binding FiltrDataOd}"
+                                Margin="0,0,6,0"
+                                ToolTip="Filtruj: data przeczytania od"/>
+                    <TextBlock Grid.Column="2" Text="do:"
+                               VerticalAlignment="Center" Margin="0,0,4,0" Foreground="Gray"/>
+                    <DatePicker Grid.Column="3"
+                                SelectedDate="{Binding FiltrDataDo}"
+                                ToolTip="Filtruj: data przeczytania do"/>
+                </Grid>
+
+                <!-- Filtr: zakres roku wydania -->
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Rok wydania od:"
+                               VerticalAlignment="Center" Margin="0,0,4,0" Foreground="Gray"/>
+                    <TextBox Grid.Column="1"
+                             Text="{Binding FiltrRokOd, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,0,6,0"
+                             ToolTip="Rok wydania od (np. 1950)"/>
+                    <TextBlock Grid.Column="2" Text="do:"
+                               VerticalAlignment="Center" Margin="0,0,4,0" Foreground="Gray"/>
+                    <TextBox Grid.Column="3"
+                             Text="{Binding FiltrRokDo, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Rok wydania do (np. 2024)"/>
+                </Grid>
+
                 <Button DockPanel.Dock="Top"
-                        Content="➕ Nowa książka"
+                        Content="➤ Nowa książka"
                         Command="{Binding NowaKsiazkaCommand}"
                         HorizontalAlignment="Left"
                         Padding="8,4"
@@ -116,22 +169,55 @@
 
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="2,4">
-                                <!-- Zawsze widoczny tytuł -->
-                                <TextBlock FontWeight="SemiBold" TextWrapping="Wrap">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Text" Value="{Binding Tytul}"/>
+                            <Grid Margin="2,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- Miniatura okładki -->
+                                <Border Grid.Column="0" Width="36" Height="52" Margin="0,0,8,0"
+                                        BorderBrush="#DDD" BorderThickness="1" Background="#F0F0F0"
+                                        VerticalAlignment="Top">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Tytul}" Value="">
-                                                    <Setter Property="Text" Value="(Nowa...)"/>
-                                                    <Setter Property="Foreground" Value="Gray"/>
-                                                    <Setter Property="FontStyle" Value="Italic"/>
+                                                <DataTrigger Binding="{Binding OkladkaSciezka}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                    </Border.Style>
+                                    <Image Source="{Binding OkladkaSciezka,
+                                                   Converter={StaticResource OkladkaConverter}}"
+                                           Stretch="UniformToFill"/>
+                                </Border>
+                                <!-- Treść elementu -->
+                                <StackPanel Grid.Column="1">
+                                <!-- Zawsze widoczny: ikonka stanu + tytuł -->
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding StanIkona, Mode=OneWay}"
+                                               Margin="0,0,6,0"
+                                               FontSize="14"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock FontWeight="SemiBold" TextWrapping="Wrap"
+                                               VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="{Binding Tytul}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Tytul}" Value="">
+                                                        <Setter Property="Text" Value="(Nowa...)"/>
+                                                        <Setter Property="Foreground" Value="Gray"/>
+                                                        <Setter Property="FontStyle" Value="Italic"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                                <!-- Zawsze widoczny autor -->
+                                <TextBlock Text="{Binding Autor, Mode=OneWay}"
+                                           Foreground="#555" FontSize="11" Margin="0,1,0,0"/>
                                 <!-- Szczegóły widoczne po zaznaczeniu (IsSelected trigger) -->
                                 <StackPanel Margin="0,4,0,2">
                                     <StackPanel.Style>
@@ -162,7 +248,8 @@
                                         <Run Text="{Binding OcenaOpis, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
-                            </StackPanel>
+                                </StackPanel>
+                            </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
 
@@ -207,8 +294,12 @@
                         <TextBlock Text="{Binding BladTytul}" Style="{StaticResource BladStyle}"/>
 
                         <TextBlock Text="Autor" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding Autor, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,2,0,2"/>
+                        <ComboBox IsEditable="True"
+                                  Text="{Binding Autor, UpdateSourceTrigger=PropertyChanged}"
+                                  ItemsSource="{Binding AutorzyListy}"
+                                  IsTextSearchEnabled="True"
+                                  StaysOpenOnEdit="True"
+                                  Margin="0,2,0,2"/>
                         <TextBlock Text="{Binding BladAutor}" Style="{StaticResource BladStyle}"/>
 
                         <TextBlock Text="Rok" FontWeight="SemiBold"/>
@@ -270,6 +361,39 @@
                         <TextBlock Text="Wydawnictwo" FontWeight="SemiBold"/>
                         <TextBox Text="{Binding Wydawnictwo, UpdateSourceTrigger=PropertyChanged}"
                                  Margin="0,2,0,8"/>
+
+                        <TextBlock Text="Okładka" FontWeight="SemiBold"/>
+                        <Border Margin="0,4,0,4" BorderBrush="#CCC" BorderThickness="1"
+                                Background="#F8F8F8" Width="120" Height="170"
+                                HorizontalAlignment="Left">
+                            <Grid>
+                                <TextBlock Text="Brak okładki" Foreground="Gray" FontStyle="Italic"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" TextAlignment="Center" Margin="8">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding MaOkladke}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <Image Source="{Binding OkladkaSciezka,
+                                               Converter={StaticResource OkladkaConverter}}"
+                                       Stretch="Uniform"/>
+                            </Grid>
+                        </Border>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button Content="📂 Wybierz okładkę"
+                                    Command="{Binding WybierzOkladkeCommand}"
+                                    Padding="6,4" Margin="0,0,6,0"/>
+                            <Button Content="✕ Usuń"
+                                    Command="{Binding UsunOkladkeCommand}"
+                                    Padding="6,4"
+                                    ToolTip="Usuń okładkę"/>
+                        </StackPanel>
 
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>

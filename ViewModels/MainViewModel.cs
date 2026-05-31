@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -10,6 +11,7 @@ using System.Windows.Input;
 using KatalogKsiazek.Helpers;
 using KatalogKsiazek.Models;
 using KatalogKsiazek.Services;
+using Microsoft.Win32;
 
 namespace KatalogKsiazek.ViewModels
 {
@@ -42,6 +44,32 @@ namespace KatalogKsiazek.ViewModels
         {
             "(wszystkie)", "Nowa", "W trakcie", "Przeczytana"
         };
+
+        public IReadOnlyList<string> SortowanieOpcje { get; } = new[]
+        {
+            "A–Z (Tytuł)", "Z–A (Tytuł)",
+            "A–Z (Autor)", "Z–A (Autor)",
+            "Rok ↑", "Rok ↓",
+            "Ocena ↑", "Ocena ↓"
+        };
+
+        private string _wybraneSortowanie = "A–Z (Tytuł)";
+        public string WybraneSortowanie
+        {
+            get => _wybraneSortowanie;
+            set
+            {
+                _wybraneSortowanie = value ?? "A–Z (Tytuł)";
+                OnPropertyChanged();
+                ZastosujSortowanie();
+            }
+        }
+
+        public IEnumerable<string> AutorzyListy =>
+            Ksiazki.Select(k => k.Autor)
+                   .Where(a => !string.IsNullOrWhiteSpace(a))
+                   .Distinct()
+                   .OrderBy(a => a);
 
         private Ksiazka? _wybrana;
         public Ksiazka? Wybrana
@@ -234,6 +262,15 @@ namespace KatalogKsiazek.ViewModels
             set { if (!_resetowanieFormularza) _formularzZmodyfikowany = true; _dataPrzeczytaniaForm = value; OnPropertyChanged(); }
         }
 
+        private string _okladkaSciezka = "";
+        public string OkladkaSciezka
+        {
+            get => _okladkaSciezka;
+            set { if (!_resetowanieFormularza) _formularzZmodyfikowany = true; _okladkaSciezka = value ?? ""; OnPropertyChanged(); OnPropertyChanged(nameof(MaOkladke)); }
+        }
+
+        public bool MaOkladke => !string.IsNullOrEmpty(_okladkaSciezka);
+
         // ── Filtry ───────────────────────────────────────────────────────
 
         private string _filtr = "";
@@ -257,11 +294,32 @@ namespace KatalogKsiazek.ViewModels
             set { _filtrStan = value ?? "(wszystkie)"; OnPropertyChanged(); _widokKsiazek.Refresh(); }
         }
 
-        private string _filtrRok = "";
-        public string FiltrRok
+        private string _filtrRokOd = "";
+        public string FiltrRokOd
         {
-            get => _filtrRok;
-            set { _filtrRok = value; OnPropertyChanged(); _widokKsiazek.Refresh(); }
+            get => _filtrRokOd;
+            set { _filtrRokOd = value; OnPropertyChanged(); _widokKsiazek.Refresh(); }
+        }
+
+        private string _filtrRokDo = "";
+        public string FiltrRokDo
+        {
+            get => _filtrRokDo;
+            set { _filtrRokDo = value; OnPropertyChanged(); _widokKsiazek.Refresh(); }
+        }
+
+        private DateTime? _filtrDataOd;
+        public DateTime? FiltrDataOd
+        {
+            get => _filtrDataOd;
+            set { _filtrDataOd = value; OnPropertyChanged(); _widokKsiazek.Refresh(); }
+        }
+
+        private DateTime? _filtrDataDo;
+        public DateTime? FiltrDataDo
+        {
+            get => _filtrDataDo;
+            set { _filtrDataDo = value; OnPropertyChanged(); _widokKsiazek.Refresh(); }
         }
 
         // ── Walidacja ────────────────────────────────────────────────────
@@ -311,6 +369,8 @@ namespace KatalogKsiazek.ViewModels
         public ICommand UsunCommand              { get; }
         public ICommand CzyscWyszukiwanieCommand { get; }
         public ICommand CzyscFiltryCommand       { get; }
+        public ICommand WybierzOkladkeCommand    { get; }
+        public ICommand UsunOkladkeCommand       { get; }
 
         public MainViewModel() : this(new JsonKsiazkaRepository()) { }
 
@@ -345,6 +405,7 @@ namespace KatalogKsiazek.ViewModels
 
             _widokKsiazek = CollectionViewSource.GetDefaultView(Ksiazki);
             _widokKsiazek.Filter = FiltrujKsiazki;
+            ZastosujSortowanie();
 
             NowaKsiazkaCommand       = new RelayCommand(_ => DodajNowaKsiazke());
             ZapiszCommand            = new RelayCommand(_ => ZapiszKsiazke(),  _ => MaWybrana && FormularzPoprawny);
@@ -353,10 +414,24 @@ namespace KatalogKsiazek.ViewModels
             CzyscWyszukiwanieCommand = new RelayCommand(_ => Filtr = "",       _ => !string.IsNullOrEmpty(Filtr));
             CzyscFiltryCommand       = new RelayCommand(_ => CzyscFiltry(),
                 _ => FiltrGatunek != "(wszystkie)" || FiltrStan != "(wszystkie)"
-                     || !string.IsNullOrEmpty(FiltrRok) || !string.IsNullOrEmpty(Filtr));
+                     || !string.IsNullOrEmpty(FiltrRokOd) || !string.IsNullOrEmpty(FiltrRokDo)
+                     || !string.IsNullOrEmpty(Filtr) || FiltrDataOd != null || FiltrDataDo != null);
+            WybierzOkladkeCommand    = new RelayCommand(_ => WybierzOkladke(), _ => MaWybrana);
+            UsunOkladkeCommand       = new RelayCommand(_ => OkladkaSciezka = "", _ => MaWybrana && MaOkladke);
         }
 
         // ── Filtrowanie ──────────────────────────────────────────────────
+
+        private void WybierzOkladke()
+        {
+            var dlg = new OpenFileDialog
+            {
+                Title  = "Wybierz okładkę książki",
+                Filter = "Obrazy|*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.webp|Wszystkie pliki|*.*"
+            };
+            if (dlg.ShowDialog() != true) return;
+            OkladkaSciezka = dlg.FileName;
+        }
 
         private bool FiltrujKsiazki(object obj)
         {
@@ -384,12 +459,36 @@ namespace KatalogKsiazek.ViewModels
                 if (!pasuje) return false;
             }
 
-            if (!string.IsNullOrWhiteSpace(FiltrRok)
-                && int.TryParse(FiltrRok, out int rok)
-                && k.Rok != rok)
+            if (!string.IsNullOrWhiteSpace(FiltrRokOd) && int.TryParse(FiltrRokOd, out int rokOd) && k.Rok < rokOd)
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(FiltrRokDo) && int.TryParse(FiltrRokDo, out int rokDo) && k.Rok > rokDo)
+                return false;
+
+            if (FiltrDataOd.HasValue && !(k.DataPrzeczytania >= FiltrDataOd.Value))
+                return false;
+
+            if (FiltrDataDo.HasValue && !(k.DataPrzeczytania <= FiltrDataDo.Value))
                 return false;
 
             return true;
+        }
+
+        private void ZastosujSortowanie()
+        {
+            _widokKsiazek.SortDescriptions.Clear();
+            var (prop, dir) = _wybraneSortowanie switch
+            {
+                "Z–A (Tytuł)" => ("Tytul",  ListSortDirection.Descending),
+                "A–Z (Autor)" => ("Autor",  ListSortDirection.Ascending),
+                "Z–A (Autor)" => ("Autor",  ListSortDirection.Descending),
+                "Rok ↑"       => ("Rok",    ListSortDirection.Ascending),
+                "Rok ↓"       => ("Rok",    ListSortDirection.Descending),
+                "Ocena ↑"     => ("Ocena",  ListSortDirection.Ascending),
+                "Ocena ↓"     => ("Ocena",  ListSortDirection.Descending),
+                _             => ("Tytul",  ListSortDirection.Ascending)
+            };
+            _widokKsiazek.SortDescriptions.Add(new SortDescription(prop, dir));
         }
 
         // ── Akcje ────────────────────────────────────────────────────────
@@ -433,6 +532,7 @@ namespace KatalogKsiazek.ViewModels
             LiczbaStronText      = "";
             ISBN                 = "";
             DataPrzeczytaniaForm = null;
+            OkladkaSciezka       = "";
             _resetowanieFormularza = false;
             NotyfikujBledy();
 
@@ -464,12 +564,14 @@ namespace KatalogKsiazek.ViewModels
             _wybrana.LiczbaStron    = int.TryParse(LiczbaStronText, out int ls) ? ls : 0;
             _wybrana.ISBN           = ISBN;
             _wybrana.DataPrzeczytania = DataPrzeczytaniaForm;
+            _wybrana.OkladkaSciezka   = OkladkaSciezka;
 
             _formularzZmodyfikowany = false;
             _trybNowa = false;
             _tymczasowaKsiazka = null;
             OnPropertyChanged(nameof(JestNowaKsiazka));
             _repository.Zapisz(Ksiazki);
+            OnPropertyChanged(nameof(AutorzyListy));
         }
 
         private void AnulujEdycje()
@@ -526,6 +628,7 @@ namespace KatalogKsiazek.ViewModels
             Ksiazki.Remove(doUsuniecia);
             CzyscFormularz();
             _repository.Zapisz(Ksiazki);
+            OnPropertyChanged(nameof(AutorzyListy));
         }
 
         private void CzyscFiltry()
@@ -533,7 +636,10 @@ namespace KatalogKsiazek.ViewModels
             Filtr        = "";
             FiltrGatunek = "(wszystkie)";
             FiltrStan    = "(wszystkie)";
-            FiltrRok     = "";
+            FiltrRokOd   = "";
+            FiltrRokDo   = "";
+            FiltrDataOd  = null;
+            FiltrDataDo  = null;
         }
 
         private void WczytajDoFormularza(Ksiazka k)
@@ -552,6 +658,7 @@ namespace KatalogKsiazek.ViewModels
             LiczbaStronText      = k.LiczbaStron > 0 ? k.LiczbaStron.ToString() : "";
             ISBN                 = k.ISBN;
             DataPrzeczytaniaForm = k.DataPrzeczytania;
+            OkladkaSciezka       = k.OkladkaSciezka;
 
             NotyfikujBledy();
             _formularzZmodyfikowany = false;
@@ -574,6 +681,7 @@ namespace KatalogKsiazek.ViewModels
             LiczbaStronText      = "";
             ISBN                 = "";
             DataPrzeczytaniaForm = null;
+            OkladkaSciezka       = "";
 
             NotyfikujBledy();
             _formularzZmodyfikowany = false;
